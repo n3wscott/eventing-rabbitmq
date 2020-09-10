@@ -26,6 +26,9 @@ jobs:
       run: |
         GO111MODULE=on go get github.com/google/ko/cmd/ko@master
 
+        wget https://github.com/wercker/stern/releases/download/1.11.0/stern_linux_amd64
+        mv stern_linux_amd64 $GOBIN/stern
+
     - name: Check out code onto GOPATH
       uses: actions/checkout@v2
       with:
@@ -138,8 +141,15 @@ jobs:
         # For logstream to work.
         export SYSTEM_NAMESPACE=knative-eventing # TODO: fix this when we move the namespace.
 
+        # start stern
+        stern ".*" -n ${SYSTEM_NAMESPACE} &
+
         # Run the tests tagged as e2e on the KinD cluster.
         go test -v -race -count=1 -timeout=15m -tags=e2e ./test/e2e/...
+
+        # stop stern (might not need to do this?)
+        bg
+        kill %1
 
     - name: Gather Failure Data
       if: ${{ failure() }}
